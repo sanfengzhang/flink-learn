@@ -28,6 +28,6 @@ public class DefaultAssignerWithPeriodicWatermarks implements AssignerWithPeriod
     @Override
     public Watermark getCurrentWatermark() {
 
-        return new Watermark(currentTimestamp == Long.MIN_VALUE ? Long.MIN_VALUE : currentTimestamp);
+        return new Watermark(currentTimestamp == Long.MIN_VALUE ? Long.MIN_VALUE : currentTimestamp-1000);
     }
 }

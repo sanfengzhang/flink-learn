@@ -43,7 +43,7 @@ public class WeiboStreamJob {
         // 设置合理的CP的时间也是需要考量的
         env.getCheckpointConfig().setCheckpointInterval(10000l);
         env.getCheckpointConfig().setCheckpointTimeout(5000L);
-        env.setParallelism(1);
+        env.setParallelism(2);
 
         WeiboEntityStream weiboEntityStream = new TextWeiboEntityStream("D:/dataset/Weibo_Data/weibo.txt");
         DataStream<WeiBo> weiboStream = weiboEntityStream.createDatastream(env);
@@ -195,6 +195,12 @@ public class WeiboStreamJob {
     //3、以流计算的方式实现一个热点微博的发现、也就是点击率、转发率最高的几条微博，把它和业务访问系统关联起来做一个缓存
     //击穿的防范措施
 
+    /**
+     * 这个示例主要是调用process这个方法，这个方法是用户可以随便实现的方法，还能获取WaterMark等流中的数据。
+     * 这个函数用户可以自己定义计算、转换的实现自己业务的逻辑
+     *
+     * @param weiboStream
+     */
     public static void exampleUsageProcessFunction(DataStream<WeiBo> weiboStream) {
         weiboStream.map(new MapFunction<WeiBo, Tuple3<String, Integer, Long>>() {
             @Override
@@ -252,10 +258,27 @@ public class WeiboStreamJob {
                          * 上面这个结果就是期望的结果O(∩_∩)O，上面的问题思考了好久，才发现这个问题。很可能是这些oprator被chain在一起了带来的问题。
                          * 将它指定为不chain在一起就好了。
                          *
+                         * 在探讨上面的问题的时候更进一步了解到Flink是如何实现WaterMark机制的？首先定义WaterMark（以下简称WM）的生成函数，指定assignTimestampsAndWatermarks这个方法
+                         * 的时候Flink会有一个专门的算子{@TimestampsAndPeriodicWatermarksOperator}去处理WM，在这个算子中processElement方法主要将StreamRecord填充timestamp、hastimestamp
+                         * 两个参数，timestamp是用户定义的function。
+                         * 还有另外一个功能：负责生成WM并emit出去，那么{@TimestampsAndPeriodicWatermarksOperator}是怎样发送WM的呢？
+                         * 在{@TimestampsAndPeriodicWatermarksOperator}会循环注册一个delay task去检测当前的WM是否满足发送的条件。条件就是：userFunction.getCurrentWaterMark>currentWatermark；
+                         * 当WM从{@TimestampsAndPeriodicWatermarksOperator}这个算子emit出去之后，下游的处理逻辑又是怎样的呢？
+                         * Flink执行顺序是：{@StreamInputProcessor}在消费Record的时候会判断数据的类型，如果是WM的时候，就会调用
+                         * statusWatermarkValve.inputWatermark(recordOrMark.asWatermark(), currentChannel);这个方法；在这个方法中主要是检测当前channle的空先状态、以及所有的channel对齐 ；
+                         * 在channel对齐之后，会执行该Operator的processWatermark(Watermark mark)方法，决定该Operator如何处理WM。
+                         * 这样就是WM从产生，到发送到下游算子，以及下游算子如何处理WM的一个过程
+                         *
                          */
-                        System.out.println("=====================================" +System.currentTimeMillis()+"||" +Thread.currentThread().getId() + " || " + ctx.timerService().currentWatermark());
+                        System.out.println("=====================================" + System.currentTimeMillis() + "||" + Thread.currentThread().getId() + " || " + ctx.timerService().currentWatermark());
                     }
                 });
+    }
+
+    public static void exampleUsageCP() {
+
+
+
     }
 
 }

@@ -15,11 +15,16 @@ import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
  */
 public class TextWeiboEntityStream implements WeiboEntityStream {
 
+    private String textPath;
+
+    public TextWeiboEntityStream(String textPath) {
+        this.textPath = textPath;
+    }
+
     @Override
     public DataStream<WeiBo> createDatastream(StreamExecutionEnvironment env) {
-        //D:\dataset\Weibo_Data\weibo_train_data.txt,C:\Users\hanlin01\Desktop\weibo.txt
-        DataStream<String> source = env.readTextFile("D:\\dataset\\Weibo_Data\\weibo.txt").name("read messgae from text");
 
+        DataStream<String> source = env.readTextFile(textPath).name("read messgae from text");
         DataStream<WeiBo> commonMessageDataStream = source.map(new MapFunction<String, CommonMessage>() {
             private static final long serialVersionUID = 1L;
 
