@@ -1,5 +1,6 @@
 package com.han.flink.weibo.source;
 
+import com.han.flink.common.CommonMessage;
 import com.han.flink.common.DefaultKafkaDeserializationSchema;
 import com.han.flink.weibo.WeiBo;
 import com.han.flink.weibo.WeiboEntityStream;
@@ -23,12 +24,14 @@ public class KafkaWeiboEntityStream implements WeiboEntityStream {
         // -----TODO--需要指定和zk之间的sessionTimeOut、心跳时长这些参数、还可以指定是否开启kafka-metric
         Properties props = new Properties();
         props.put("bootstrap.servers", "192.168.12.100:9092");
-        props.put("group.id", "weibo-consumer");
+        props.put("group.id", "weibo-consumer-1");
         props.put("auto.offset.reset", "earliest");
 
-        DataStreamSource<WeiBo> source = env.addSource(
-                new FlinkKafkaConsumer010("weibo-topic", new DefaultKafkaDeserializationSchema(), props),
+        DataStreamSource<CommonMessage> source = env.addSource(
+                new FlinkKafkaConsumer010("test-leader", new DefaultKafkaDeserializationSchema(), props),
                 "weibo-kafka-source");
-        return source;
+
+        DataStream<WeiBo> commonMessageDataStream = source.map(new MessageToWeboFunction()).name("CommonMessage -->Weibo");
+        return commonMessageDataStream;
     }
 }
