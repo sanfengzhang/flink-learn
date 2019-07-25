@@ -1,9 +1,8 @@
 package com.han.kafka;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.*;
+import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
@@ -17,96 +16,114 @@ import org.junit.Test;
 
 public class Produce {
 
-	private List<String> getWeiboData() throws IOException {
+    @Test
+    public void testCharr() throws Exception {
+        String s = IOUtils.toString(new FileInputStream(new File("C:\\Users\\hanlin01\\Desktop\\新建文本文档 (3).log")), "Unicode");
+        System.out.println(s);
 
-		FileInputStream fis = new FileInputStream(new File("D:\\dataset\\Weibo_Data\\weibo_train_data.txt"));
-		List<String> _list = IOUtils.readLines(fis, "UTF-8");
 
-		fis.close();
-		return _list;
+        byte arr[] = IOUtils.toByteArray(new FileReader(new File("C:\\Users\\hanlin01\\Desktop\\新建文本文档 (3).log")));
+        System.out.println(decodeUnicode(Arrays.toString(arr)));
 
-	}
+    }
 
-	@Test
-	public void produceWeiBoData() throws FileNotFoundException, IOException {
+    public static String decodeUnicode(final String dataStr) {
+        int start = 0;
+        int end = 0;
+        final StringBuffer buffer = new StringBuffer();
+        while (start > -1) {
+            end = dataStr.indexOf("\\u", start + 2);
+            String charStr = "";
+            if (end == -1) {
+                charStr = dataStr.substring(start + 2, dataStr.length());
+            } else {
+                charStr = dataStr.substring(start + 2, end);
+            }
+            char letter = (char) Integer.parseInt(charStr, 16);
+            buffer.append(Character.toString(letter));
+            start = end;
+        }
+        return buffer.toString();
+    }
 
-		Properties props = getProperties();
+    private List<String> getWeiboData() throws IOException {
 
-		List<String> _list = getWeiboData();
+        FileInputStream fis = new FileInputStream(new File("D:\\dataset\\Weibo_Data\\weibo_train_data.txt"));
+        List<String> _list = IOUtils.readLines(fis, "UTF-8");
 
-		KafkaProducer<String, String> producer = new KafkaProducer<String, String>(props);
-		int count = 0;
-		for (String weibo : _list) {
-			if (count == 10) {
-				break;
-			}
-			ProducerRecord<String, String> record = new ProducerRecord<String, String>("weibo_topic", weibo);
-			producer.send(record, new Callback() {
+        fis.close();
+        return _list;
 
-				public void onCompletion(RecordMetadata recordMetadata, Exception arg1) {
-					if (arg1 != null) {
-						System.out.println(arg1);
-					}
+    }
 
-				}
-			});
+    @Test
+    public void produceWeiBoData() throws Exception {
 
-			count++;
-		}
+        Properties props = getProperties();
 
-		producer.close();
+        List<String> _list = getWeiboData();
 
-	}
+        KafkaProducer<String, String> producer = new KafkaProducer<String, String>(props);
+        for (String weibo : _list) {
+            ProducerRecord<String, String> record = new ProducerRecord<String, String>("weibo_topic", weibo);
+            producer.send(record, new Callback() {
 
-	private List<String> getWeiboData10() throws IOException {
+                public void onCompletion(RecordMetadata recordMetadata, Exception arg1) {
+                    if (arg1 != null) {
+                        System.out.println(arg1);
+                    }
+                }
+            });
+            Thread.sleep(1000);
+        }
 
-		FileInputStream fis = new FileInputStream(new File("C:\\Users\\hanlin01\\Desktop\\leader.txt"));
-		List<String> _list = IOUtils.readLines(fis, "UTF-8");
+        producer.close();
 
-		fis.close();
-		return _list;
+    }
 
-	}
+    private List<String> getWeiboData10() throws IOException {
 
-	@Test
-	public void produceWeiBoData10() throws FileNotFoundException, IOException {
+        FileInputStream fis = new FileInputStream(new File("C:\\Users\\hanlin01\\Desktop\\leader.txt"));
+        List<String> _list = IOUtils.readLines(fis, "UTF-8");
 
-		Properties props = getProperties();
+        fis.close();
+        return _list;
 
-		List<String> _list = getWeiboData10().subList(10, 50);
+    }
 
-		KafkaProducer<String, String> producer = new KafkaProducer<String, String>(props);
-		for (String weibo : _list) {
+    @Test
+    public void produceWeiBoData10() throws FileNotFoundException, IOException {
+        Properties props = getProperties();
+        List<String> _list = getWeiboData();
+        KafkaProducer<String, String> producer = new KafkaProducer<String, String>(props);
+        for (String weibo : _list) {
+            ProducerRecord<String, String> record = new ProducerRecord<String, String>("test-leader", weibo);
+            producer.send(record, new Callback() {
 
-			ProducerRecord<String, String> record = new ProducerRecord<String, String>("test-leader", weibo);
-			producer.send(record, new Callback() {
+                public void onCompletion(RecordMetadata recordMetadata, Exception arg1) {
+                    if (arg1 != null) {
+                        System.out.println(arg1);
+                    }
 
-				public void onCompletion(RecordMetadata recordMetadata, Exception arg1) {
-					if (arg1 != null) {
-						System.out.println(arg1);
-					}
+                }
+            });
+        }
+        System.out.println("----------------end---------------");
+        producer.close();
+    }
 
-				}
-			});
+    private Properties getProperties() {
+        Properties props = new Properties();
+        props.put("bootstrap.servers", "192.168.12.100:9092,192.168.12.101:9092,192.168.12.102:9092");
+        props.put("acks", "all");
+        props.put("retries", 0);
+        props.put("batch.size", 10000);
+        props.put("linger.ms", 10);
+        props.put("buffer.memory", 33554432);
+        props.put("key.serializer", StringSerializer.class);
+        props.put("value.serializer", StringSerializer.class);
 
-		}
-
-		producer.close();
-
-	}
-
-	private Properties getProperties() {
-		Properties props = new Properties();
-		props.put("bootstrap.servers", "192.168.12.100:9092,192.168.12.101:9092,192.168.12.102:9092");
-		props.put("acks", "all");
-		props.put("retries", 0);
-		props.put("batch.size", 10000);
-		props.put("linger.ms", 10);
-		props.put("buffer.memory", 33554432);
-		props.put("key.serializer", StringSerializer.class);
-		props.put("value.serializer", StringSerializer.class);
-
-		return props;
-	}
+        return props;
+    }
 
 }
