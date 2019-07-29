@@ -18,6 +18,7 @@ public class TimeWindowTest {
         System.out.println(time);
         System.out.println(start);
         System.out.println(TimeWindow.getWindowStartWithOffset(time+12, 0, 10));
+
     }
 
 }

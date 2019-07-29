@@ -6,6 +6,7 @@ package com.han.flink;
  * @desc:
  */
 
+import org.apache.flink.api.common.functions.CoGroupFunction;
 import org.apache.flink.api.common.functions.JoinFunction;
 import org.apache.flink.api.common.functions.MapFunction;
 import org.apache.flink.api.java.functions.KeySelector;
@@ -19,6 +20,7 @@ import org.apache.flink.streaming.api.functions.AssignerWithPeriodicWatermarks;
 import org.apache.flink.streaming.api.watermark.Watermark;
 import org.apache.flink.streaming.api.windowing.assigners.TumblingEventTimeWindows;
 import org.apache.flink.streaming.api.windowing.time.Time;
+import org.apache.flink.util.Collector;
 
 /**
  * 这个是对在窗口处理中指定提取eventTime的方法和水印时间的获取。
@@ -39,15 +41,15 @@ import org.apache.flink.streaming.api.windowing.time.Time;
  * <p>
  * <p>
  * FIXME:还是要先弄清楚Join是如何关联的？在同一时间段内，将两个流按指定的字段进行关联，发现在这个时间窗口内的数据就加入
- *      到窗口中去。
- *
+ * 到窗口中去。
+ * <p>
  * 在这一块代码功能分析的方面： {@HeapInternalTimerService#advanceWatermark}这个里面是触发Window计算的调用
  * FIXME 之前一直有个问题困扰着，就是两个流stream1、stream2假设按a1、a2两个字段进行关联，可能在某一个窗口中
- *       stream1的某条数据n在等待stream2中的数据m进行关联、但是stream2由于一些原因迟迟没有数据m进来这个时候怎么办？
+ * stream1的某条数据n在等待stream2中的数据m进行关联、但是stream2由于一些原因迟迟没有数据m进来这个时候怎么办？
  * 1.关于这个问题需要有个前提那就是确保stream2是有数据的只是m这条数据丢失了，如果是1对1的情况下，那stream2这条数据没有进来，
- *   那窗口计算就不会触发、也就没找到对应的输出
+ * 那窗口计算就不会触发、也就没找到对应的输出
  *
- *
+ * 解决上面的问题可以通过coGroup()和CoGroupFunction接口来解决这个问题，通过自己定义这个处理函数来定义自己的输入输出
  */
 
 public class JoinStream {
@@ -94,6 +96,20 @@ public class JoinStream {
 
     }
 
+
+
+
+    public static void defineCoGroupFunction(DataStream<Tuple3<String, Long, Long>> stream1, DataStream<Tuple3<String, Long, Long>> stream2) {
+        stream1.coGroup(stream2).where(new MyJoinKeyselector()).equalTo(new MyJoinKeyselector()).window(TumblingEventTimeWindows.of(Time.milliseconds(5000))).
+                apply(new CoGroupFunction<Tuple3<String, Long, Long>, Tuple3<String, Long, Long>, Object>() {
+                    @Override
+                    public void coGroup(Iterable<Tuple3<String, Long, Long>> first, Iterable<Tuple3<String, Long, Long>> second, Collector<Object> out) throws Exception {
+
+
+                    }});
+    }
+
+
     private static DataStream<Tuple3<String, Long, Long>> getSource(StreamExecutionEnvironment env, int port) {
 
         DataStream<Tuple3<String, Long, Long>> sourceStream = env.socketTextStream("127.0.0.1", port)
@@ -108,7 +124,7 @@ public class JoinStream {
 
         private static final long serialVersionUID = 1L;
 
-        private transient  long currentTimestamp = Long.MIN_VALUE;
+        private transient long currentTimestamp = Long.MIN_VALUE;
 
         @Override
         public long extractTimestamp(Tuple3<String, Long, Long> element, long previousElementTimestamp) {
@@ -122,7 +138,7 @@ public class JoinStream {
         @Override
         public Watermark getCurrentWatermark() {
 
-            long wt=currentTimestamp == Long.MIN_VALUE ? Long.MIN_VALUE : currentTimestamp-5000;
+            long wt = currentTimestamp == Long.MIN_VALUE ? Long.MIN_VALUE : currentTimestamp - 5000;
 
             return new Watermark(wt);
         }
@@ -150,7 +166,7 @@ public class JoinStream {
             Tuple3<String, Long, Long> result = new Tuple3<String, Long, Long>();
             result.f0 = tokens[0].trim();
             result.f1 = Long.parseLong(tokens[1]);
-            result.f2 = Long.parseLong(tokens[2])*1000;
+            result.f2 = Long.parseLong(tokens[2]) * 1000;
             return result;
 
         }

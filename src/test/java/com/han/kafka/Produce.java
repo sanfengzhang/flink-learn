@@ -1,11 +1,6 @@
 package com.han.kafka;
 
-import java.io.*;
-import java.nio.charset.Charset;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Properties;
-
+import com.sun.xml.internal.messaging.saaj.packaging.mime.util.ASCIIUtility;
 import org.apache.commons.io.IOUtils;
 import org.apache.kafka.clients.producer.Callback;
 import org.apache.kafka.clients.producer.KafkaProducer;
@@ -14,18 +9,54 @@ import org.apache.kafka.clients.producer.RecordMetadata;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.Test;
 
+import java.io.*;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+import java.util.Properties;
+
 public class Produce {
 
     @Test
     public void testCharr() throws Exception {
-        String s = IOUtils.toString(new FileInputStream(new File("C:\\Users\\hanlin01\\Desktop\\新建文本文档 (3).log")), "Unicode");
-        System.out.println(s);
+//        String s = IOUtils.toString(new FileInputStream(new File("C:\\Users\\hanlin01\\Desktop\\新建文本文档 (3).log")), "UTF-8");
+//        System.out.println(s);
 
 
-        byte arr[] = IOUtils.toByteArray(new FileReader(new File("C:\\Users\\hanlin01\\Desktop\\新建文本文档 (3).log")));
-        System.out.println(decodeUnicode(Arrays.toString(arr)));
+        System.out.println(new String("\u8fd9\u662f\u4e00\u4e2a\u4f8b\u5b50".getBytes(), "utf-8"));
+        //  System.out.println(toString(aa,0,aa.length));
+
 
     }
+
+
+    public static byte[] getBytes(String str) {
+        char[] toCharArray = str.toCharArray();
+        int length = toCharArray.length;
+        byte[] bArr = new byte[length];
+        int i = 0;
+        while (i < length) {
+            int i2 = i + 1;
+            bArr[i] = (byte) toCharArray[i];
+            i = i2;
+        }
+        return bArr;
+    }
+
+    public static String toString(byte[] bArr, int i, int i2) {
+        int i3 = i2 - i;
+        char[] cArr = new char[i3];
+        int i4 = 0;
+        while (i4 < i3) {
+            int i5 = i4 + 1;
+            int i6 = i + 1;
+            cArr[i4] = (char) (bArr[i] & 255);
+            i4 = i5;
+            i = i6;
+        }
+        return new String(cArr);
+    }
+
 
     public static String decodeUnicode(final String dataStr) {
         int start = 0;
