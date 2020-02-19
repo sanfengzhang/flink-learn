@@ -19,7 +19,7 @@ public class KafkaApiTest {
 	public void setup() {
 		clientProps = new Properties();
 		clientProps.put(CommonClientConfigs.BOOTSTRAP_SERVERS_CONFIG,
-				"baspv76.360es.cn:9092,baspv77.360es.cn:9092,baspv78.360es.cn:9092");
+				“”);
 		clientProps.put("client.id", "client0");
 
 		client = AdminClient.create(clientProps);
